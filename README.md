@@ -65,7 +65,7 @@ Remember to setup the [example/rclone.conf](example/rclone.conf) file, known as 
 
 ### Deploying the MySQL app (source & dest)
 
-> ![NOTE](images/note-icon.png) **NOTE**: You don't need _cluster-admin_ privileges in order to do the following steps.
+> ![NOTE](images/note-icon.png) **NOTE**: You don't need _cluster-admin_ privileges in order to do the following steps, but you need special rights in order to label nodes.
 
 We are going to [placing pods on specific nodes using node selectors](https://docs.openshift.com/container-platform/4.7/nodes/scheduling/nodes-scheduler-node-selectors.html). Concretely, we are going to use `Project node selectors` so when you create a pod in the project, OpenShift adds the node selectors to the pod and schedules the pods on a node with matching labels. If there is a cluster-wide default node selector, a project node selector takes preference.
 
@@ -83,8 +83,8 @@ We are going to [placing pods on specific nodes using node selectors](https://do
 
     ```bash
     oc create ns source
-    oc annotate ns source openshift.io/node-selector="type=source" --overwrite
-    oc create -f examples/source-database/ -n source
+    oc annotate ns source openshift.io/node-selector="scribe=source" --overwrite
+    oc create -f example/source-database/ -n source
 
     ##Check the progress
     oc get pods -n source -w
@@ -96,8 +96,8 @@ We are going to [placing pods on specific nodes using node selectors](https://do
 
     ```bash
     oc create ns dest
-    oc annotate ns dest openshift.io/node-selector="type=dest" --overwrite
-    oc create -n dest -f examples/destination-database/
+    oc annotate ns dest openshift.io/node-selector="scribe=dest" --overwrite
+    oc create -n dest -f example/destination-database/
     ```
 
 ### Synchronise source & dest
@@ -107,15 +107,15 @@ We are going to [placing pods on specific nodes using node selectors](https://do
 1. Add a new file to sync
 
     ```bash
-    oc cp README.md mysql-87f849f8c-tbjn6:/var/lib/mysql/README.md
+    oc cp README.md `oc get pods -n source | grep mysql | awk '{print $1}'`:/var/lib/mysql/README.md
     oc rsync -n source ./images `oc get pods -n source | grep mysql | awk '{print $1}'`:/var/lib/mysql
     ```
 
 2. Config Scribe replication
 
     ```bash
-    oc create secret generic rclone-secret --from-file=rclone.conf=./examples/rclone.conf -n source
-    oc create -f examples/scribe_v1alpha1_replicationsource_rclone.yaml -n source
+    oc create secret generic rclone-secret --from-file=rclone.conf=./example/rclone.conf -n source
+    oc create -f example/scribe_v1alpha1_replicationsource_rclone.yaml -n source
     ```
 
 3. To verify the replication has completed describe the Replication source
@@ -146,8 +146,8 @@ We are going to [placing pods on specific nodes using node selectors](https://do
 1. Config Scribe replication
 
     ```bash
-    oc create secret generic rclone-secret --from-file=rclone.conf=./examples/rclone.conf -n dest
-    oc create -f examples/scribe_v1alpha1_replicationdestination_rclone.yaml -n dest
+    oc create secret generic rclone-secret --from-file=rclone.conf=./example/rclone.conf -n dest
+    oc create -f example/scribe_v1alpha1_replicationdestination_rclone.yaml -n dest
     ```
 
 2. Connect to the mysql pod and list/navigate the `/var/lib/mysql` to verify the _image_ folder exists (and its content)

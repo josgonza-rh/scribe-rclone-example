@@ -13,5 +13,3 @@ spec:
     rcloneDestPath: "my-scribe-bucket"
     rcloneConfig: "rclone-secret"
     copyMethod: None
-    accessModes: [ReadWriteOnce]
-    capacity: 2Gi
